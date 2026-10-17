@@ -1,0 +1,48 @@
+================================================================================
+LABORATORIO 5: SEGURIDAD INFORMÁTICA - UNA CHAT
+UNIVERSIDAD NACIONAL - SEDE REGIONAL CHOROTEGA CAMPUS NICOYA
+CARRERA: INGENIERÍA EN SISTEMAS DE LA INFORMACIÓN
+================================================================================
+
+ENLACE AL REPOSITORIO DE GITHUB:
+https://github.com/crissXcoder/lab05_SI
+
+--------------------------------------------------------------------------------
+DESCRIPCIÓN DEL PROYECTO Y SUITES DE PRUEBAS:
+--------------------------------------------------------------------------------
+Este repositorio contiene el código fuente de UNA Chat protegido contra inyecciones
+de scripts (Cross-Site Scripting - XSS) y fortalecido con soporte seguro para URLs
+multimedia (imágenes y videos de YouTube embebidos).
+
+El proyecto incluye 3 suites de pruebas automatizadas:
+1. Pruebas Unitarias (Mocha):
+   - Comando: npm run test:unit
+   - Archivo: test/test.js
+   - Valida números telefónicos, URLs de imágenes, URLs de YouTube y funciones de sanitización en unalib.js.
+
+2. Pruebas de Integración (Jest & Supertest & Socket.IO):
+   - Comando: npm run test:integration
+   - Archivo: tests/integration/chat.test.js
+   - Valida la comunicación backend Express / Socket.IO con la librería unalib.js y el método validarMensaje.
+
+3. Pruebas End-to-End (Playwright):
+   - Comando: npm run test:e2e
+   - Archivo: tests/e2e/chat.spec.js
+   - Navega con Chromium simulando usuarios reales, valida carga de imágenes, reproductor de video
+     y verifica con page.on('dialog') que el script malicioso no ejecute alert().
+
+--------------------------------------------------------------------------------
+COMANDOS DE CONFIGURACIÓN Y EJECUCIÓN:
+--------------------------------------------------------------------------------
+1. Instalación de dependencias:
+   npm install
+
+2. Instalación de navegadores para Playwright:
+   npx playwright install chromium
+
+3. Iniciar el servidor de desarrollo:
+   npm start
+
+4. Ejecutar todas las pruebas en conjunto:
+   npm run test:all
+================================================================================

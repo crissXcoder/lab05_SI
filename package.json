@@ -1,11 +1,31 @@
 {
-  "dependencies": {
-    "express": "*",
-    "mocha": "^10.2.0",
-    "socket.io": "*"
-  },
+  "name": "lab05_SI",
+  "version": "1.0.0",
+  "description": "Laboratorio 5: Seguridad Informática - UNA Chat Seguro",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "mocha"
+    "test": "mocha test/test.js",
+    "test:unit": "mocha test/test.js",
+    "test:integration": "jest tests/integration --runInBand --env=node",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/e2e/"
+    ]
+  },
+  "dependencies": {
+    "express": "*",
+    "socket.io": "*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "jest": "^29.7.0",
+    "mocha": "^10.2.0",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.0.0"
   }
 }

@@ -1,6 +1,5 @@
 # Dependencias
 node_modules/
-package-lock.json
 
 # Reportes y resultados de pruebas
 test-results/
@@ -14,6 +13,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.log
+
+# Scripts de apoyo internos
+scratch/
 
 # Entornos y temporales
 .env
