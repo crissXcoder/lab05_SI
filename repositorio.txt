@@ -46,3 +46,30 @@ COMANDOS DE CONFIGURACIÓN Y EJECUCIÓN:
 4. Ejecutar todas las pruebas en conjunto:
    npm run test:all
 ================================================================================
+
+================================================================================
+LABORATORIO CI/CD: DESPLIEGUE CONTINUO SEGURO CON GITHUB ACTIONS Y RENDER
+================================================================================
+
+ENLACES OFICIALES DE ENTREGA:
+1. URL Pública del Chat en Producción (Render):
+   https://lab05-si.onrender.com
+
+2. Enlace al Workflow Modificado en GitHub (.github/workflows/deploy.yml):
+   https://github.com/crissXcoder/lab05_SI/blob/main/.github/workflows/deploy.yml
+
+3. Evidencia Ejecución 1 - Pruebas Exitosas y Despliegue (Run ID 41116167087):
+   https://github.com/crissXcoder/lab05_SI/actions/runs/41116167087
+
+4. Evidencia Ejecución 2 - Prueba Fallida y Despliegue Bloqueado (Run ID 41116480792):
+   https://github.com/crissXcoder/lab05_SI/actions/runs/41116480792
+
+5. Evidencia Ejecución 3 - Restauración Exitosa (Run ID 41116680189):
+   https://github.com/crissXcoder/lab05_SI/actions/runs/41116680189
+
+--------------------------------------------------------------------------------
+DOCUMENTOS DE BITÁCORA Y REPORTES TÉCNICOS:
+--------------------------------------------------------------------------------
+- Bitacora_Despliegue_Chat_GitHub_Actions_Render.docx (Formato Word APA 7)
+- Bitacora_Despliegue_Chat_GitHub_Actions_Render.pdf  (Formato PDF Oficial)
+================================================================================
