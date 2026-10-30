@@ -5,8 +5,7 @@ describe('unalib - Suite de Pruebas Unitarias Robustas', function () {
 
   describe('1. Validación de Números Telefónicos (is_valid_phone)', function () {
     it('debería devolver true para un número válido con guion (8297-8547)', function () {
-      // INTENTIONAL FAILURE FOR CI/CD QUALITY GATE VERIFICATION:
-      assert.strictEqual(val.is_valid_phone('8297-8547'), false);
+      assert.strictEqual(val.is_valid_phone('8297-8547'), true);
     });
 
     it('debería devolver true para formato internacional (+506 8297-8547)', function () {
