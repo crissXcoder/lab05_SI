@@ -73,3 +73,39 @@ DOCUMENTOS DE BITÁCORA Y REPORTES TÉCNICOS:
 - Bitacora_Despliegue_Chat_GitHub_Actions_Render.docx (Formato Word APA 7)
 - Bitacora_Despliegue_Chat_GitHub_Actions_Render.pdf  (Formato PDF Oficial)
 ================================================================================
+
+================================================================================
+LABORATORIO: MONITOREO DE LOGS, DISPONIBILIDAD Y TELEMETRÍA (UNA CHAT)
+UNIVERSIDAD NACIONAL - SEDE REGIONAL CHOROTEGA CAMPUS NICOYA
+CURSO: SEGURIDAD INFORMÁTICA (4 %)
+================================================================================
+
+ENLACES Y RECURSOS OFICIALES DE ENTREGA:
+1. Repositorio Oficial en GitHub:
+   https://github.com/crissXcoder/lab05_SI
+
+2. Aplicación Monitoreada en Producción (Render / Vercel Cloud):
+   https://lab05-si.onrender.com
+
+3. Monitor de Disponibilidad en Cronitor (Status: Healthy, Uptime: 100%):
+   https://cronitor.io/app/monitors/una-chat-disponibilidad
+
+4. Proyecto de Monitoreo de Errores y Excepciones en Sentry:
+   https://crissxcoder.sentry.io/issues/
+   - Event ID de Prueba Controlada: 0d502d27a9e043de9e001f8f04223b33
+   - Trace ID: 022950b53e8c4f03bf09db30a1f83409
+
+5. Arquitectura de Telemetría Declarativa y Contenerización:
+   - instrument.js: Inicialización temprana de Sentry SDK.
+   - otel.js: OpenTelemetry OTLP hacia Grafana Cloud (Loki, Tempo, Mimir).
+   - logger.js: Correlación automática de trace_id con logs.
+   - Dockerfile: Imagen ultra-ligera en node:24-alpine.
+   - docker-compose.yml: Orquestación local para pruebas de carga.
+   - artillery-load-test.yml: Escenario sintético de 300 solicitudes a 5 req/s.
+
+--------------------------------------------------------------------------------
+DOCUMENTOS DE BITÁCORA Y REPORTES TÉCNICOS OFICIALES (APA 7):
+--------------------------------------------------------------------------------
+- Bitacora_Laboratorio_Monitoreo_UNA_Chat.docx (Documento editable Word APA 7 con Figuras 1 a 5)
+- Bitacora_Laboratorio_Monitoreo_UNA_Chat.pdf  (Documento formal compilado en PDF de alta fidelidad)
+================================================================================

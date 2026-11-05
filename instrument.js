@@ -19,3 +19,4 @@ Sentry.init({
 console.log('[Sentry] SDK inicializado correctamente desde instrument.js');
 
 module.exports = Sentry;
+
