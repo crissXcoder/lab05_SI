@@ -24,3 +24,6 @@ scratch/
 Thumbs.db
 
 docs/
+.vercel
+artillery-report*
+.playwright-mcp/

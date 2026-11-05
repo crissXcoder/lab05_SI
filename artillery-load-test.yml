@@ -1,0 +1,20 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Fase sostenida: 5 usuarios/segundo durante 60 segundos (300 solicitudes objetivo)"
+  http:
+    timeout: 10
+
+scenarios:
+  - name: "Envio de mensaje validado a UNA Chat"
+    flow:
+      - post:
+          url: "/api/mensaje"
+          headers:
+            Content-Type: "application/json"
+          json:
+            nombre: "ArtilleryVirtualUser"
+            mensaje: "Prueba de carga automatizada UNA Chat - Monitoreo de telemetria"
+

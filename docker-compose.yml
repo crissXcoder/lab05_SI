@@ -1,0 +1,18 @@
+services:
+  una-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: una-chat-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - OTEL_SERVICE_NAME=una-chat
+      - OTEL_ENVIRONMENT=local
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+
