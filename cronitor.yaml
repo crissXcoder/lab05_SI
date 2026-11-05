@@ -1,0 +1,15 @@
+checks:
+  una-chat-disponibilidad:
+    name: UNA Chat - Monitoreo de Disponibilidad
+    schedule: "every 5 min"
+    request:
+      url: "https://lab05-si.onrender.com"
+      method: "GET"
+    assertions:
+      - "response.time < 2s"
+      - "response.code = 200"
+    notify:
+      - default
+    tags:
+      - una-chat
+      - seguridad-informatica

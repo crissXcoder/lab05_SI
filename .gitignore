@@ -27,3 +27,5 @@ docs/
 .vercel
 artillery-report*
 .playwright-mcp/
+.agents/
+skills-lock.json
