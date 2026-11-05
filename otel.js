@@ -37,6 +37,13 @@ if (process.env.VERCEL) {
     // Si el endpoint no termina en /otlp, lo usamos como base
     const cleanEndpoint = rawEndpoint.replace(/\/+$/, '');
 
+    const exporterHeaders = {};
+    const rawHeaders = (process.env.OTEL_EXPORTER_OTLP_HEADERS || '').trim();
+    if (rawHeaders.includes('Authorization=')) {
+      const part = rawHeaders.split('Authorization=')[1].split(',')[0].trim();
+      exporterHeaders['Authorization'] = decodeURIComponent(part);
+    }
+
     const sdk = new NodeSDK({
       resource: resourceFromAttributes({
         'service.name': process.env.OTEL_SERVICE_NAME || 'una-chat',
@@ -44,10 +51,12 @@ if (process.env.VERCEL) {
       }),
       traceExporter: new OTLPTraceExporter({
         url: cleanEndpoint.endsWith('/v1/traces') ? cleanEndpoint : `${cleanEndpoint}/v1/traces`,
+        headers: exporterHeaders,
       }),
       metricReader: new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
           url: cleanEndpoint.endsWith('/v1/metrics') ? cleanEndpoint : `${cleanEndpoint}/v1/metrics`,
+          headers: exporterHeaders,
         }),
         exportIntervalMillis: 5000, // Exportar cada 5 segundos para actualización rápida de métricas
       }),
@@ -55,6 +64,7 @@ if (process.env.VERCEL) {
         new BatchLogRecordProcessor(
           new OTLPLogExporter({
             url: cleanEndpoint.endsWith('/v1/logs') ? cleanEndpoint : `${cleanEndpoint}/v1/logs`,
+            headers: exporterHeaders,
           })
         ),
       ],
