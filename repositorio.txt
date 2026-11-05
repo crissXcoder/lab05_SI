@@ -95,7 +95,13 @@ ENLACES Y RECURSOS OFICIALES DE ENTREGA:
    - Event ID de Prueba Controlada: 0d502d27a9e043de9e001f8f04223b33
    - Trace ID: 022950b53e8c4f03bf09db30a1f83409
 
-5. Arquitectura de Telemetría Declarativa y Contenerización:
+5. Reporte en Vivo de Prueba de Carga en Artillery Cloud:
+   https://app.artillery.io/odm1hg8w9k7qa/load-tests/t7f7j_ncb6w6ghm64j7rak4a6zaywddxagb_ezr3
+   - Resultados: 300 solicitudes completadas (100% HTTP 200 OK, 0 fallos).
+   - Latencia: Mediana 6.0 ms, p95 10.9 ms, p99 15.0 ms.
+   - Trace ID de ejemplo correlacionado con Loki y Tempo: 7751fd37ab673d0c6a42636c72bd1567
+
+6. Arquitectura de Telemetría Declarativa y Contenerización:
    - instrument.js: Inicialización temprana de Sentry SDK.
    - otel.js: OpenTelemetry OTLP hacia Grafana Cloud (Loki, Tempo, Mimir).
    - logger.js: Correlación automática de trace_id con logs.
