@@ -1,7 +1,7 @@
 /**
  * @file server.js
- * @description Servidor UNA Chat con soporte WebSocket (Socket.IO) y HTTP REST (Express).
- * Integra la librería de validación y sanitización unalib para prevenir inyecciones de scripts.
+ * @description Servidor UNA Chat con soporte WebSocket (Socket.IO), HTTP REST (Express),
+ * autenticación Auth0 OIDC con secretos protegidos en Supabase Vault, telemetría y sanitización.
  */
 
 'use strict';
@@ -18,40 +18,116 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const validation = require('./libs/unalib');
 const { logInfo, logError } = require('./logger');
+const { getClientSecretFromVault, runStartupProbe } = require('./server/vault');
 
 const port = process.env.PORT || 3000;
 
-// Sanitizar CLIENT_SECRET si está vacío para evitar fallo de esquema en express-openid-connect
+// Variables de Auth0 (soporte para formato de laboratorio y compatibilidad OIDC)
+const auth0Domain = (process.env.AUTH0_DOMAIN || 'dev-n4zx07h2zlhwtujm.us.auth0.com')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/$/, '');
+const auth0ClientId = process.env.AUTH0_CLIENT_ID || process.env.CLIENT_ID || 'aAgD2set6xwI5QDdISM5e46O51JV3FCL';
+const appBaseUrl = (process.env.APP_BASE_URL || process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const issuerBaseURL = process.env.ISSUER_BASE_URL || `https://${auth0Domain}`;
+
+// Sanitizar CLIENT_SECRET si está vacío para evitar fallo de validación en express-openid-connect
 if (!process.env.CLIENT_SECRET || process.env.CLIENT_SECRET.trim() === '') {
   delete process.env.CLIENT_SECRET;
 }
 
-// Configuración de Auth0 Express OpenID Connect
+// Configuración base de Auth0 Express OpenID Connect
 const authConfig = {
   authRequired: false,
   auth0Logout: true,
   secret: process.env.SECRET || 'c7da15dbf5a1a9293a7194a5e2ea29b096001e0a2e32388fa677bbdf43d46f8a',
-  baseURL: process.env.BASE_URL || 'http://localhost:3000',
-  clientID: process.env.CLIENT_ID || 'aAgD2set6xwI5QDdISM5e46O51JV3FCL',
-  issuerBaseURL: process.env.ISSUER_BASE_URL || 'https://dev-n4zx07h2zlhwtujm.us.auth0.com',
+  baseURL: appBaseUrl,
+  clientID: auth0ClientId,
+  issuerBaseURL: issuerBaseURL,
+  routes: {
+    login: false,
+    callback: '/auth/callback',
+    logout: false,
+    postLogoutRedirect: '/',
+  },
 };
 
 if (process.env.CLIENT_SECRET && process.env.CLIENT_SECRET.trim() !== '') {
   authConfig.clientSecret = process.env.CLIENT_SECRET.trim();
 }
 
-app.use(auth(authConfig));
+let authMiddleware = auth(authConfig);
+
+// Middleware dinámico para soportar recarga de clientSecret desde Vault al arrancar
+app.use((req, res, next) => {
+  if (authMiddleware) {
+    return authMiddleware(req, res, next);
+  }
+  next();
+});
 
 // Middlewares para análisis de solicitudes HTTP
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ruta para registro con screen_hint en Auth0
+/**
+ * Endpoints de autenticación requeridos por el Laboratorio 8 y Auth0
+ */
+
+// GET /auth/config: 200 OK con flags públicos. El Client Secret nunca se expone.
+app.get('/auth/config', function (req, res) {
+  return res.status(200).json({
+    enabled: true,
+    domain: auth0Domain,
+    clientId: auth0ClientId,
+  });
+});
+
+// Endpoint compatible con el frontend existente
+app.get('/api/auth-config', function (req, res) {
+  return res.json({
+    domain: auth0Domain,
+    clientId: auth0ClientId,
+  });
+});
+
+// GET /auth/login: Inicia el flujo OIDC y redirige a Auth0 Universal Login (302)
+app.get('/auth/login', (req, res) => {
+  return res.oidc.login({
+    returnTo: '/sala',
+  });
+});
+
+// GET /login: Redirección de conveniencia hacia /auth/login
+app.get('/login', (req, res) => {
+  return res.redirect('/auth/login');
+});
+
+// GET /auth/logout: Cierra sesión y redirige al inicio
+app.get('/auth/logout', (req, res) => {
+  return res.oidc.logout({
+    returnTo: '/',
+  });
+});
+
+// GET /logout: Redirección de conveniencia hacia /auth/logout
+app.get('/logout', (req, res) => {
+  return res.redirect('/auth/logout');
+});
+
+// GET /signup: Registro directo con screen_hint en Auth0
 app.get('/signup', (req, res) => {
   return res.oidc.login({
-    returnTo: '/',
+    returnTo: '/sala',
     authorizationParams: { screen_hint: 'signup' },
   });
+});
+
+// GET /sala: Requiere autenticación. Responde 401 si no hay sesión abierta.
+app.get('/sala', function (req, res) {
+  if (req.oidc && req.oidc.isAuthenticated()) {
+    return res.sendFile(__dirname + '/index.html');
+  }
+  return res.status(401).send('No autorizado. Debe iniciar sesión para ingresar a la sala.');
 });
 
 // Endpoint para consultar estado de sesión OIDC en el servidor
@@ -71,16 +147,6 @@ app.get('/api/me', (req, res) => {
 // Ruta principal para servir la interfaz del chat
 app.get('/', function (req, res) {
   res.sendFile(__dirname + '/index.html');
-});
-
-/**
- * Endpoint para proveer la configuración pública de Auth0 al cliente SPA.
- */
-app.get('/api/auth-config', function (req, res) {
-  return res.json({
-    domain: process.env.AUTH0_DOMAIN || 'dev-n4zx07h2zlhwtujm.us.auth0.com',
-    clientId: process.env.AUTH0_CLIENT_ID || 'zbbzSMgcBv7jloVq40qrHKAuAJX9SC9n'
-  });
 });
 
 /**
@@ -149,11 +215,51 @@ io.on('connection', function (socket) {
   });
 });
 
-// Iniciar el servidor si se ejecuta como proceso principal
-if (require.main === module) {
+/**
+ * Inicialización asíncrona del servidor con lectura de Supabase Vault y prueba de arranque Auth0
+ */
+async function startServer() {
+  let activeSecret = authConfig.clientSecret || process.env.CLIENT_SECRET;
+
+  if (process.env.VAULT_DATABASE_URL) {
+    try {
+      console.log('[Vault] Conectando a Supabase Vault para obtener el Client Secret de Auth0...');
+      const secret = await getClientSecretFromVault(process.env.VAULT_DATABASE_URL);
+      if (secret) {
+        activeSecret = secret;
+        authConfig.clientSecret = secret;
+        authMiddleware = auth(authConfig);
+        console.log(`[Vault] Secreto obtenido de Supabase Vault exitosamente (longitud: ${secret.length})`);
+      }
+    } catch (vaultError) {
+      console.warn('[Vault] Aviso: No se pudo obtener el secreto desde Vault:', vaultError.message);
+      if (activeSecret) {
+        console.log('[Vault] Utilizando secreto provisto por variable de entorno');
+      }
+    }
+  }
+
+  // Ejecutar prueba de arranque si hay un secreto disponible
+  if (activeSecret) {
+    console.log('[Vault] Ejecutando prueba de arranque contra Auth0...');
+    await runStartupProbe({
+      domain: auth0Domain,
+      clientId: auth0ClientId,
+      clientSecret: activeSecret,
+      redirectUri: `${appBaseUrl}/auth/callback`,
+    });
+  } else {
+    console.log('[Vault] Servidor iniciando sin Client Secret activo (modo solo lectura)');
+  }
+
   http.listen(port, function () {
     console.log('Servidor UNA Chat escuchando en *:' + port);
   });
 }
 
-module.exports = { app, http, io };
+// Iniciar el servidor si se ejecuta como proceso principal
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, http, io, startServer };
