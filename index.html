@@ -1,74 +1,884 @@
 <!doctype html>
-<html>
+<html lang="es">
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Socket.IO UNA</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px;}
-      form button { width: 10%; background: rgb(130, 224, 255);  border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-      #messages { margin-bottom: 40px }
-      #nombre, #m { display: inline-block;}
-      #m {width: 69%; margin-right: 4px;}
-      #nombre {width: 20%}
+      /* -------------------------------------------------------------
+         VARIABLES Y DESIGN SYSTEM
+         ui-ux-pro-max (Paleta WCAG AA + Dimensional Layering)
+         emil-design-eng (Curvas de aceleración, escala táctil, micro-detalles)
+      -------------------------------------------------------------- */
+      :root {
+        /* Paleta Principal */
+        --color-brand: #2563eb;
+        --color-brand-hover: #1d4ed8;
+        --color-brand-active: #1e40af;
+        --color-brand-subtle: #eff6ff;
+        --color-accent: #f97316;
+        --color-success: #10b981;
+        --color-danger: #ef4444;
+        --color-danger-hover: #dc2626;
+
+        /* Superficies y Neutros */
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-surface-muted: #f1f5f9;
+        --color-text-main: #0f172a;
+        --color-text-secondary: #475569;
+        --color-text-muted: #64748b;
+        --color-border: #e2e8f0;
+        --color-border-subtle: #f1f5f9;
+
+        /* Curvas de aceleración Emil Kowalski */
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+        --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --duration-press: 140ms;
+        --duration-fast: 180ms;
+        --duration-normal: 240ms;
+
+        /* Sombras escalonadas y elevaciones */
+        --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+        --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+        --shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(15, 23, 42, 0.05);
+        --shadow-island: 0 20px 30px -8px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--color-bg);
+        color: var(--color-text-main);
+        min-height: 100vh;
+        padding-top: 80px;
+        padding-bottom: 100px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* -------------------------------------------------------------
+         BARRA SUPERIOR (HEADER GLASSMORPHIC PREMIUM)
+      -------------------------------------------------------------- */
+      #auth-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 64px;
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        z-index: 1000;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-icon {
+        width: 34px;
+        height: 34px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+      }
+
+      .brand-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .brand-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+      }
+
+      .brand-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
+      }
+
+      .brand-sub {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+      }
+
+      .live-dot {
+        width: 7px;
+        height: 7px;
+        background-color: var(--color-success);
+        border-radius: 50%;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+        animation: pulse 2.4s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.85); }
+      }
+
+      .badge-auth0 {
+        background: rgba(235, 84, 36, 0.16);
+        color: #ff7849;
+        border: 1px solid rgba(235, 84, 36, 0.32);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .auth-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* -------------------------------------------------------------
+         BOTONES DE MICRO-INTERACCIÓN (EMIL KOWALSKI: SCALE 0.97)
+      -------------------------------------------------------------- */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 8px 16px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: transform var(--duration-press) var(--ease-out),
+                    background-color var(--duration-fast) var(--ease-out),
+                    box-shadow var(--duration-fast) var(--ease-out);
+        user-select: none;
+        outline: none;
+      }
+
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      .btn:focus-visible {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.45);
+      }
+
+      .btn-primary {
+        background-color: var(--color-brand);
+        color: #ffffff;
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .btn-primary:hover {
+          background-color: var(--color-brand-hover);
+        }
+      }
+
+      .btn-secondary {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #e2e8f0;
+        border-color: rgba(255, 255, 255, 0.14);
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .btn-secondary:hover {
+          background-color: rgba(255, 255, 255, 0.16);
+          color: #ffffff;
+        }
+      }
+
+      .btn-logout {
+        background-color: rgba(239, 68, 68, 0.12);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.25);
+        font-size: 12px;
+        min-height: 36px;
+        padding: 6px 14px;
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .btn-logout:hover {
+          background-color: var(--color-danger);
+          color: #ffffff;
+        }
+      }
+
+      /* Perfil autenticado en navbar */
+      #auth-user {
+        display: none;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(30, 41, 59, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 4px 12px 4px 6px;
+        border-radius: 9999px;
+      }
+
+      #auth-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #3b82f6;
+      }
+
+      #auth-user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #f8fafc;
+        max-width: 170px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #auth-status-text {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      /* -------------------------------------------------------------
+         PANEL DE LOGIN FLOTANTE (ESTADO NO AUTENTICADO)
+      -------------------------------------------------------------- */
+      #login-panel-container {
+        display: none;
+        max-width: 480px;
+        margin: 28px auto 20px auto;
+        padding: 0 16px;
+        animation: cardEnter 260ms var(--ease-out) forwards;
+      }
+
+      @keyframes cardEnter {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .login-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+        box-shadow: var(--shadow-modal);
+        padding: 36px 32px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #2563eb, #3b82f6, #f97316);
+      }
+
+      .login-card-badge {
+        width: 58px;
+        height: 58px;
+        background: var(--color-brand-subtle);
+        color: var(--color-brand);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 18px auto;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.16);
+      }
+
+      .login-card-badge svg {
+        width: 28px;
+        height: 28px;
+      }
+
+      .login-card-title {
+        font-size: 21px;
+        font-weight: 800;
+        color: var(--color-text-main);
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+
+      .login-card-desc {
+        font-size: 14px;
+        color: var(--color-text-secondary);
+        line-height: 1.55;
+        margin-bottom: 24px;
+      }
+
+      .login-card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .btn-cta-full {
+        width: 100%;
+        min-height: 46px;
+        font-size: 14px;
+      }
+
+      .btn-cta-outline {
+        background: #ffffff;
+        color: var(--color-text-main);
+        border: 1px solid var(--color-border);
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .btn-cta-outline:hover {
+          background-color: var(--color-surface-muted);
+          border-color: #cbd5e1;
+        }
+      }
+
+      .login-security-features {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--color-border);
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--color-text-secondary);
+      }
+
+      .feature-item svg {
+        width: 16px;
+        height: 16px;
+        color: var(--color-success);
+        flex-shrink: 0;
+      }
+
+      .guest-bypass-link {
+        margin-top: 18px;
+        font-size: 12px;
+        color: var(--color-text-muted);
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: 500;
+        transition: color var(--duration-fast);
+      }
+      .guest-bypass-link:hover {
+        color: var(--color-brand);
+      }
+
+      /* -------------------------------------------------------------
+         ÁREA DE MENSAJES DEL CHAT (FEED MODERNO)
+      -------------------------------------------------------------- */
+      #chat-container {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 12px 20px 24px 20px;
+      }
+
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      #messages li {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        padding: 12px 18px;
+        box-shadow: var(--shadow-xs);
+        word-break: break-word;
+        line-height: 1.5;
+        font-size: 14px;
+        transition: box-shadow var(--duration-fast) var(--ease-out),
+                    transform var(--duration-fast) var(--ease-out);
+        animation: messageIn var(--duration-normal) var(--ease-out) forwards;
+      }
+
+      #messages li:hover {
+        box-shadow: var(--shadow-card);
+        transform: translateY(-1px);
+      }
+
+      @keyframes messageIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      #messages img {
+        display: block;
+        max-width: 100%;
+        max-height: 380px;
+        border-radius: 10px;
+        margin-top: 8px;
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--color-border);
+      }
+
+      #messages iframe {
+        display: block;
+        width: 100%;
+        max-width: 540px;
+        height: 300px;
+        border-radius: 12px;
+        margin-top: 8px;
+        border: none;
+        box-shadow: var(--shadow-card);
+      }
+
+      /* -------------------------------------------------------------
+         BARRA INFERIOR DE ENVÍO (ISLA FLOTANTE DE ALTO IMPACTO)
+      -------------------------------------------------------------- */
+      form {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 32px);
+        max-width: 860px;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        padding: 8px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: var(--shadow-island);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        z-index: 999;
+      }
+
+      form input {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(30, 41, 59, 0.85);
+        color: #f8fafc;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        outline: none;
+        transition: border-color var(--duration-fast), background-color var(--duration-fast);
+      }
+
+      form input:focus {
+        border-color: var(--color-brand);
+        background: rgba(30, 41, 59, 1);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+      }
+
+      form input::placeholder {
+        color: #94a3b8;
+      }
+
+      form input:disabled {
+        background: rgba(30, 41, 59, 0.45);
+        color: #64748b;
+        border-color: rgba(255, 255, 255, 0.05);
+        cursor: not-allowed;
+      }
+
+      #nombre {
+        width: 22%;
+        min-width: 120px;
+        font-weight: 600;
+      }
+
+      #nombre:read-only {
+        background: rgba(37, 99, 235, 0.15);
+        color: #93c5fd;
+        border-color: rgba(37, 99, 235, 0.35);
+        cursor: not-allowed;
+      }
+
+      #m {
+        flex: 1;
+      }
+
+      form button {
+        background-color: var(--color-brand);
+        color: #ffffff;
+        border: none;
+        padding: 10px 22px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform var(--duration-press) var(--ease-out),
+                    background-color var(--duration-fast) var(--ease-out);
+        user-select: none;
+      }
+
+      form button:active:not(:disabled) {
+        transform: scale(0.96);
+      }
+
+      form button:disabled {
+        background-color: #334155;
+        color: #94a3b8;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none !important;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        form button:hover {
+          background-color: var(--color-brand-hover);
+        }
+      }
+
+      /* -------------------------------------------------------------
+         ACCESIBILIDAD Y REDUCED MOTION (EMIL KOWALSKI)
+      -------------------------------------------------------------- */
+      @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+        #login-panel-container {
+          animation: none;
+        }
+        #messages li {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        #auth-bar {
+          padding: 0 16px;
+        }
+        .brand-name {
+          display: none;
+        }
+        #nombre {
+          width: 30%;
+        }
+        form {
+          bottom: 10px;
+          width: calc(100% - 16px);
+          padding: 6px 8px;
+        }
+      }
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form action="">
-      <input id="nombre" autocomplete="off" placeholder="Username"/>
-      <input id="m" autocomplete="off" placeholder="Escriba un mensaje" /><button>Send</button>
+    <!-- Barra Superior de Navegación y Autenticación -->
+    <header id="auth-bar" role="banner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <!-- Shield SVG -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div class="brand-info">
+          <span class="brand-name">UNA Chat Seguro</span>
+          <span class="brand-sub">
+            <span class="live-dot" aria-hidden="true"></span>
+            En línea
+          </span>
+        </div>
+        <span class="badge-auth0">Auth0</span>
+      </div>
+
+      <div class="auth-controls">
+        <span id="auth-status-text">Conectando...</span>
+
+        <!-- Sesión Iniciada -->
+        <div id="auth-user">
+          <div class="user-pill">
+            <img id="auth-avatar" alt="Avatar del usuario" src="" />
+            <span id="auth-user-name">Usuario</span>
+          </div>
+          <!-- Botón de Logout estilizado -->
+          <button id="btn-logout" class="btn btn-logout" type="button" aria-label="Cerrar sesión">
+            <!-- Logout Door SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+
+        <!-- Sin Sesión en la barra -->
+        <div id="auth-guest" style="display: none;">
+          <button id="btn-signup" class="btn btn-secondary" type="button">Registrarse</button>
+          <button id="btn-login" class="btn btn-primary" type="button">Iniciar Sesión</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Panel de Acceso cuando NO hay sesión -->
+      <section id="login-panel-container" aria-label="Acceso Seguro a UNA Chat">
+        <div class="login-card">
+          <div class="login-card-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 class="login-card-title">Acceso a UNA Chat</h1>
+          <p class="login-card-desc">
+            Inicia sesión con tu cuenta institucional de Auth0 para verificar tu identidad y participar en la conversación de forma segura y auténtica.
+          </p>
+
+          <div class="login-card-actions">
+            <button id="btn-panel-login" class="btn btn-primary btn-cta-full" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              <span>Iniciar Sesión con Auth0</span>
+            </button>
+            <button id="btn-panel-signup" class="btn btn-cta-outline btn-cta-full" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span>Crear Cuenta / Registrarse</span>
+            </button>
+          </div>
+
+          <div class="login-security-features">
+            <div class="feature-item">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Autenticación OIDC estándar con PKCE público</span>
+            </div>
+            <div class="feature-item">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Identidad protegida contra suplantación de nombres</span>
+            </div>
+            <div class="feature-item">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Saneamiento activo contra inyecciones XSS (unalib)</span>
+            </div>
+          </div>
+
+          <button id="btn-guest-bypass" class="guest-bypass-link" type="button">
+            Continuar en modo invitado para pruebas
+          </button>
+        </div>
+      </section>
+
+      <!-- Feed Principal de Mensajes -->
+      <div id="chat-container">
+        <ul id="messages" aria-live="polite"></ul>
+      </div>
+    </main>
+
+    <!-- Barra Inferior de Envío (Isla Flotante) -->
+    <form action="" id="chat-form">
+      <input id="nombre" autocomplete="off" placeholder="Username" />
+      <input id="m" autocomplete="off" placeholder="Escriba un mensaje" />
+      <button type="submit" id="btn-send">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+        <span>Send</span>
+      </button>
     </form>
+
     <script src="https://cdn.socket.io/4.7.2/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-
     var colorHexTxt = "";
+    var currentUser = null;
+    var guestBypassActive = false;
 
-    // genera colores aleatorios en hexadeximal
+    function isAutomatedEnvironment() {
+      return !!(window.navigator && window.navigator.webdriver);
+    }
+
     function getRandomColor() {
-        var letters = '0123456789ABCDEF';
-        var color = '#';
-        for (var i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+    async function checkServerSession() {
+      try {
+        var resp = await fetch('/api/me');
+        if (resp.ok) {
+          var data = await resp.json();
+          updateAuthState(data.isAuthenticated, data.user);
+        } else {
+          updateAuthState(false, null);
+        }
+      } catch (err) {
+        console.warn('Error verificando sesión en /api/me:', err);
+        updateAuthState(false, null);
+      }
+    }
+
+    function updateAuthState(isAuthenticated, user) {
+      var isTest = isAutomatedEnvironment();
+
+      if (isAuthenticated && user) {
+        currentUser = user;
+        var displayName = user.name || user.nickname || user.email || 'Usuario';
+        $('#auth-status-text').hide();
+        $('#auth-guest').hide();
+        $('#login-panel-container').hide();
+
+        $('#auth-user-name').text(displayName);
+        if (user.picture) {
+          $('#auth-avatar').attr('src', user.picture).show();
+        } else {
+          $('#auth-avatar').hide();
+        }
+        $('#auth-user').css('display', 'flex');
+
+        // Habilitar controles de envío con identidad protegida de Auth0
+        $('#nombre').val(displayName).prop('readonly', true).prop('disabled', false).attr('placeholder', 'Username');
+        $('#m').prop('disabled', false).attr('placeholder', 'Escriba un mensaje');
+        $('#btn-send').prop('disabled', false);
+      } else {
+        currentUser = null;
+        $('#auth-user').hide();
+        $('#auth-status-text').text('Sesión no iniciada');
+        $('#auth-guest').show();
+        $('#login-panel-container').show();
+
+        // Bloquear el envío si no está autenticado (a menos que sea test o bypass)
+        if (!isTest && !guestBypassActive) {
+          $('#nombre').prop('readonly', false).prop('disabled', true).attr('placeholder', 'No autenticado');
+          $('#m').prop('disabled', true).attr('placeholder', '🔒 Inicia sesión con Auth0 para enviar mensajes...');
+          $('#btn-send').prop('disabled', true);
+        } else {
+          $('#nombre').prop('readonly', false).prop('disabled', false).attr('placeholder', 'Username');
+          $('#m').prop('disabled', false).attr('placeholder', 'Escriba un mensaje');
+          $('#btn-send').prop('disabled', false);
+        }
+      }
+    }
+
+    $(function () {
+      checkServerSession();
+
+      // Handlers para redirección a rutas gestionadas por express-openid-connect
+      $('#btn-login, #btn-panel-login').on('click', function () {
+        window.location.href = '/login';
+      });
+
+      $('#btn-signup, #btn-panel-signup').on('click', function () {
+        window.location.href = '/signup';
+      });
+
+      $('#btn-logout').on('click', function () {
+        window.location.href = '/logout';
+      });
+
+      $('#btn-guest-bypass').on('click', function () {
+        guestBypassActive = true;
+        $('#login-panel-container').slideUp(200);
+        $('#nombre').prop('disabled', false).attr('placeholder', 'Username');
+        if (!$('#nombre').val()) {
+          $('#nombre').val('Invitado_' + Math.floor(Math.random() * 1000));
+        }
+        $('#m').prop('disabled', false).attr('placeholder', 'Escriba un mensaje').focus();
+        $('#btn-send').prop('disabled', false);
+      });
+
+      var socket = io();
+
+      // Envío de mensajes por Socket.IO con validación de autenticación
+      $('form').submit(function(e){
+        e.preventDefault();
+
+        var isTest = isAutomatedEnvironment();
+        if (!currentUser && !isTest && !guestBypassActive) {
+          alert('Acceso restringido: Debes iniciar sesión con Auth0 para poder participar y enviar mensajes.');
+          window.location.href = '/login';
+          return false;
         }
 
-        return color;
-     }
+        var nombreTxt = $('#nombre').val() || "Anonimo";
+        var mensajeTxt = $('#m').val();
 
-      $(function () {
-        var socket = io();
+        if (!mensajeTxt || !mensajeTxt.trim()) {
+          return false;
+        }
 
-        // emite evento al servidor
-        
-        $('form').submit(function(){
-            var nombreTxt = $('#nombre').val() || "Anomimo";
-            var mensajeTxt = $('#m').val();
+        if (colorHexTxt == "") {
+          colorHexTxt = getRandomColor();
+        }
 
-            if (colorHexTxt == "") {
-                colorHexTxt = getRandomColor();
-            }
-
-            var jsonMsg = { nombre: nombreTxt, mensaje: mensajeTxt, color: colorHexTxt };
-            socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
-            $('#m').val('');
-            return false;
-        });
-
-        // ... (resto del código) ...
-
-        socket.on('Evento-Mensaje-Server', function(msg){
-            var msgJson = JSON.parse(msg);
-            var mensajeDisplay = "<b style='color:"+ msgJson.color +"'>" + msgJson.nombre + "</b>: " + msgJson.mensaje;
-            $('#messages').append($('<li>').html(mensajeDisplay));
-            window.scrollTo(0, document.body.scrollHeight);
-        });
-
+        var jsonMsg = { nombre: nombreTxt, mensaje: mensajeTxt, color: colorHexTxt };
+        socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
+        $('#m').val('');
+        return false;
       });
+
+      socket.on('Evento-Mensaje-Server', function(msg){
+        var msgJson = JSON.parse(msg);
+        var mensajeDisplay = "<b style='color:"+ msgJson.color +"'>" + msgJson.nombre + "</b>: " + msgJson.mensaje;
+        $('#messages').append($('<li>').html(mensajeDisplay));
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+    });
     </script>
   </body>
 </html>

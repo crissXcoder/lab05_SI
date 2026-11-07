@@ -12,6 +12,7 @@ require('./otel');
 const Sentry = require('@sentry/node');
 
 const express = require('express');
+const { auth } = require('express-openid-connect');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
@@ -20,13 +21,66 @@ const { logInfo, logError } = require('./logger');
 
 const port = process.env.PORT || 3000;
 
+// Sanitizar CLIENT_SECRET si está vacío para evitar fallo de esquema en express-openid-connect
+if (!process.env.CLIENT_SECRET || process.env.CLIENT_SECRET.trim() === '') {
+  delete process.env.CLIENT_SECRET;
+}
+
+// Configuración de Auth0 Express OpenID Connect
+const authConfig = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.SECRET || 'c7da15dbf5a1a9293a7194a5e2ea29b096001e0a2e32388fa677bbdf43d46f8a',
+  baseURL: process.env.BASE_URL || 'http://localhost:3000',
+  clientID: process.env.CLIENT_ID || 'aAgD2set6xwI5QDdISM5e46O51JV3FCL',
+  issuerBaseURL: process.env.ISSUER_BASE_URL || 'https://dev-n4zx07h2zlhwtujm.us.auth0.com',
+};
+
+if (process.env.CLIENT_SECRET && process.env.CLIENT_SECRET.trim() !== '') {
+  authConfig.clientSecret = process.env.CLIENT_SECRET.trim();
+}
+
+app.use(auth(authConfig));
+
 // Middlewares para análisis de solicitudes HTTP
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Ruta para registro con screen_hint en Auth0
+app.get('/signup', (req, res) => {
+  return res.oidc.login({
+    returnTo: '/',
+    authorizationParams: { screen_hint: 'signup' },
+  });
+});
+
+// Endpoint para consultar estado de sesión OIDC en el servidor
+app.get('/api/me', (req, res) => {
+  if (req.oidc && req.oidc.isAuthenticated()) {
+    return res.json({
+      isAuthenticated: true,
+      user: req.oidc.user,
+    });
+  }
+  return res.json({
+    isAuthenticated: false,
+    user: null,
+  });
+});
+
 // Ruta principal para servir la interfaz del chat
 app.get('/', function (req, res) {
   res.sendFile(__dirname + '/index.html');
+});
+
+/**
+ * Endpoint para proveer la configuración pública de Auth0 al cliente SPA.
+ */
+app.get('/api/auth-config', function (req, res) {
+  return res.json({
+    domain: process.env.AUTH0_DOMAIN || 'dev-n4zx07h2zlhwtujm.us.auth0.com',
+    clientId: process.env.AUTH0_CLIENT_ID || 'zbbzSMgcBv7jloVq40qrHKAuAJX9SC9n'
+  });
 });
 
 /**
